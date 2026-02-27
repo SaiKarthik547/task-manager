@@ -1,0 +1,11 @@
+.env
+.sqlite
+*.log
+node_modules
+.ps1
+.sqlite-shm
+.sqlite-wal
+dist
+__pycache__
+*.pyc
+__pycache__
