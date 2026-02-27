@@ -1,0 +1,182 @@
+# ============================================================================
+# ROOT LEVEL .gitignore - Task Management System
+# ============================================================================
+
+# ============================================================================
+# BACKEND - Python & FastAPI
+# ============================================================================
+backend/.env
+backend/.env.local
+backend/.venv/
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/build/
+backend/develop-eggs/
+backend/dist/
+backend/downloads/
+backend/eggs/
+backend/.eggs/
+backend/lib/
+backend/lib64/
+backend/parts/
+backend/sdist/
+backend/var/
+backend/wheels/
+backend/pip-wheel-metadata/
+backend/*.egg-info/
+backend/.installed.cfg
+backend/*.egg
+backend/MANIFEST
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.tox/
+backend/.mypy_cache/
+backend/.dmypy.json
+backend/dmypy.json
+backend/.pyre/
+backend/*.sqlite
+backend/*.sqlite-shm
+backend/*.sqlite-wal
+backend/*.db
+backend/*.log
+backend/logs/
+
+# ============================================================================
+# FRONTEND - Node.js & React
+# ============================================================================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/coverage/
+frontend/.nyc_output/
+frontend/*.local
+frontend/.vite/
+frontend/.cache/
+frontend/.env
+frontend/.env.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+frontend/*.tsbuildinfo
+
+# ============================================================================
+# IDE & EDITOR CONFIGURATION
+# ============================================================================
+.vscode/
+!.vscode/extensions.json
+.idea/
+.vs/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+
+# ============================================================================
+# OS & SYSTEM FILES
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.AppleDouble
+.LSOverride
+*.bak
+*.tmp
+temp/
+tmp/
+
+# ============================================================================
+# TEMPORARY & BACKUP FILES
+# ============================================================================
+*.pid
+*.sock
+*.swp
+*.swo
+*~
+.tmp/
+.backup/
+*.orig
+
+# ============================================================================
+# DEVELOPMENT ARTIFACTS
+# ============================================================================
+.cache/
+*.egg-info/
+dist/
+build/
+site/
+
+# ============================================================================
+# ENVIRONMENT & SECRETS
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.test.local
+secrets/
+.secrets/
+
+# ============================================================================
+# LOGS
+# ============================================================================
+*.log
+logs/
+*.log*
+debug.log
+error.log
+npm-debug.log
+
+# ============================================================================
+# VSCODE SETTINGS (if checking in)
+# ============================================================================
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# Note: Keep .vscode/extensions.json and other shared configs
+# Only ignore personal settings
+
+# ============================================================================
+# GIT & VERSION CONTROL
+# ============================================================================
+.git/
+.gitmodules
+.gitkeep
+
+# ============================================================================
+# CI/CD & TESTING
+# ============================================================================
+.github/
+.gitlab-ci.yml
+.circleci/
+test-results/
+coverage-reports/
+.nyc_output/
+
+# ============================================================================
+# PACKAGE MANAGER
+# ============================================================================
+package-lock.json  # Optional - remove comment to ignore
+yarn.lock          # Optional - remove comment to ignore
+pnpm-lock.yaml     # Optional - remove comment to ignore
+poetry.lock        # Optional - remove comment to ignore
+Pipfile.lock       # Optional - remove comment to ignore

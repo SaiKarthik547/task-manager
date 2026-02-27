@@ -1,11 +1,107 @@
+# Environment Variables
 .env
-.sqlite
+.env.local
+.env.*.local
+.env.production.local
+
+# Database Files
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.postgresql
+*.mysql
+
+# Python Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / Packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv
+.virtualenv
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+test-results/
+.cache/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
 *.log
-node_modules
-.ps1
-.sqlite-shm
-.sqlite-wal
-dist
-__pycache__
-*.pyc
-__pycache__
+logs/
+npm-debug.log*
+yarn-debug.log*
+
+# OS Files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+*.bak
+*.swp
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# IDE Configuration Files
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pylintrc
+setup.cfg
+
+# Lock Files (optional - uncomment if you want to ignore these)
+# poetry.lock
+# Pipfile.lock
+
+# Runtime
+*.pid
+*.sock
