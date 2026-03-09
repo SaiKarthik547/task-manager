@@ -75,10 +75,10 @@ class PermissionChecker:
              # Better to check for 'Admin' role name
              for role in current_user.roles:
                  if role.name == 'Admin':
-                     return True
+                     return current_user
 
              raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions"
             )
-        return True
+        return current_user

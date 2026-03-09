@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from datetime import datetime, timedelta
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status

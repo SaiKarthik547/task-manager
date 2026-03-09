@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ from app.core.socket import sio
 
 router = APIRouter()
 
-@router.get("/", response_model=Any)
+@router.get("/")
 def read_tasks(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -30,9 +31,9 @@ def read_tasks(
     else:
         tasks = db.query(Task).filter(Task.assigned_to == current_user.id).all()
         
-    return {"tasks": tasks}
+    return jsonable_encoder({"tasks": tasks})
 
-@router.get("/{task_id}", response_model=Any)
+@router.get("/{task_id}")
 def read_task(
     task_id: int,
     db: Session = Depends(deps.get_db),
@@ -43,9 +44,9 @@ def read_task(
         raise HTTPException(status_code=404, detail="Task not found")
     
     # Permission check?
-    return {"task": task}
+    return jsonable_encoder({"task": task})
 
-@router.post("/", response_model=Any)
+@router.post("/")
 async def create_task(
     task_in: project_schemas.TaskCreate,
     db: Session = Depends(deps.get_db),
@@ -107,9 +108,9 @@ async def create_task(
             room=f"user_{task.assigned_to}"
         )
         
-    return {"task": task, "message": "Task created"}
+    return jsonable_encoder({"task": task, "message": "Task created"})
 
-@router.patch("/{task_id}", response_model=Any)
+@router.patch("/{task_id}")
 async def update_task(
     task_id: int,
     task_in: project_schemas.TaskUpdate,
@@ -165,9 +166,9 @@ async def update_task(
             room=f"user_{task.assigned_to}"
         )
         
-    return {"task": task, "message": "Task updated"}
+    return jsonable_encoder({"task": task, "message": "Task updated"})
 
-@router.delete("/{task_id}", response_model=Any)
+@router.delete("/{task_id}")
 def delete_task(
     task_id: int,
     db: Session = Depends(deps.get_db),
@@ -182,7 +183,7 @@ def delete_task(
     db.commit()
     return {"message": "Task deleted"}
 
-@router.get("/{task_id}/comments", response_model=Any)
+@router.get("/{task_id}/comments")
 def read_comments(
     task_id: int,
     db: Session = Depends(deps.get_db),
@@ -191,7 +192,7 @@ def read_comments(
     comments = db.query(TaskComment).filter(TaskComment.task_id == task_id).all()
     return {"comments": comments}
 
-@router.post("/{task_id}/comments", response_model=Any)
+@router.post("/{task_id}/comments")
 async def create_comment(
     task_id: int,
     comment_in: project_schemas.CommentCreate,

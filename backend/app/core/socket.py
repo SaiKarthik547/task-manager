@@ -124,8 +124,46 @@ async def send_message(sid, data):
             }
         }
         
-        # Emit to room
+        # Get conversation participants to emit directly to their personal rooms
+        conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+        if not conversation:
+            return
+
+        # Emit to room directly and to each user's personal room for notifications
         await sio.emit('new_message', msg_data, room=str(conversation_id))
+        
+        for participant in conversation.participants:
+            # Emit to personal room so they receive it anywhere in the app
+            await sio.emit('new_message', msg_data, room=f"user_{participant.id}")
+            
+            # Create a notification for other participants
+            if participant.id != user_id:
+                from app.models import Notification
+                notification = Notification(
+                    user_id=participant.id,
+                    type="new_message",
+                    title=f"New message from {sender.full_name}",
+                    content=content, # Show snippet
+                    is_read=0,
+                    created_at=datetime.utcnow()
+                )
+                db.add(notification)
+                db.commit()
+                db.refresh(notification)
+                
+                # Emit real-time notification
+                await sio.emit(
+                    "notification_created",
+                    {
+                        "id": notification.id,
+                        "type": notification.type,
+                        "title": notification.title,
+                        "content": notification.content,
+                        "created_at": notification.created_at.isoformat(),
+                        "is_read": notification.is_read
+                    },
+                    room=f"user_{participant.id}"
+                )
         
     except Exception as e:
         print(f"Error saving message: {e}")

@@ -25,6 +25,14 @@ A production-ready, 100% free, self-hosted **Enterprise Task Management Platform
 
 ## ✨ Features
 
+### 🚀 Production-Grade Implementation Updates
+✅ **System-Wide Dark Mode** - Premium dynamic theming implemented with Tailwind CSS and saved user preferences.
+✅ **Robust Authentication** - Fixed Python 3.12+ legacy `passlib` issues by migrating to direct `bcrypt` hashing for 100% login success.
+✅ **Real-Time Direct Messaging** - Re-architected Socket.io implementation to deliver messages instantly to private `user_{id}` rooms.
+✅ **Enterprise Scalability** - SQLite upgraded to Write-Ahead Logging (WAL) mode to handle high-frequency concurrent socket reads/writes without database locking.
+✅ **Data Consistency** - All FastApi endpoints fully patched with `jsonable_encoder` to eliminate 500 Pydantic formatting errors.
+✅ **Offline Notifications** - Real-time chat activity seamlessly triggers persistent database notifications when users are interacting.
+
 ### Core Functionality
 ✅ **100% Free & Open-Source** - No paid dependencies or licensing fees  
 ✅ **Self-Hosted** - Full control over your data and infrastructure  

@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -7,7 +8,7 @@ from app.schemas import project as project_schemas
 
 router = APIRouter()
 
-@router.get("/", response_model=Any)
+@router.get("/")
 def read_projects(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -22,9 +23,9 @@ def read_projects(
     deps.PermissionChecker("projects.view")(current_user)
     
     projects = db.query(Project).offset(skip).limit(limit).all()
-    return {"projects": projects}
+    return jsonable_encoder({"projects": projects})
 
-@router.get("/{project_id}", response_model=Any)
+@router.get("/{project_id}")
 def read_project(
     project_id: int,
     db: Session = Depends(deps.get_db),
@@ -33,9 +34,9 @@ def read_project(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    return {"project": project}
+    return jsonable_encoder({"project": project})
 
-@router.post("/", response_model=Any)
+@router.post("/")
 def create_project(
     project_in: project_schemas.ProjectCreate,
     db: Session = Depends(deps.get_db),
@@ -48,9 +49,9 @@ def create_project(
     db.add(project)
     db.commit()
     db.refresh(project)
-    return {"project": project, "message": "Project created"}
+    return jsonable_encoder({"project": project, "message": "Project created"})
 
-@router.patch("/{project_id}", response_model=Any)
+@router.patch("/{project_id}")
 def update_project(
     project_id: int,
     project_in: project_schemas.ProjectUpdate,
@@ -79,9 +80,9 @@ def update_project(
 
     db.commit()
     db.refresh(project)
-    return {"project": project, "message": "Project updated"}
+    return jsonable_encoder({"project": project, "message": "Project updated"})
 
-@router.delete("/{project_id}", response_model=Any)
+@router.delete("/{project_id}")
 def delete_project(
     project_id: int,
     db: Session = Depends(deps.get_db),
@@ -106,7 +107,7 @@ def delete_project(
     db.commit()
     return {"message": "Project deleted"}
 
-@router.post("/{project_id}/members", response_model=Any)
+@router.post("/{project_id}/members")
 def add_member(
     project_id: int,
     member_data: dict, # {userId: int, role: str}
@@ -147,7 +148,7 @@ def add_member(
     
     return {"message": "Member added"}
 
-@router.delete("/{project_id}/members/{user_id}", response_model=Any)
+@router.delete("/{project_id}/members/{user_id}")
 def remove_member(
     project_id: int,
     user_id: int,
@@ -166,7 +167,7 @@ def remove_member(
 
     return {"message": "Member removed"}
 
-@router.get("/{project_id}/tasks", response_model=Any)
+@router.get("/{project_id}/tasks")
 def read_project_tasks(
     project_id: int,
     db: Session = Depends(deps.get_db),
@@ -179,4 +180,4 @@ def read_project_tasks(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    return {"tasks": project.tasks}
+    return jsonable_encoder({"tasks": project.tasks})

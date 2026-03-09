@@ -92,7 +92,7 @@ export default function ProjectDetails() {
                 <div className="glass-card p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-bold text-gray-800">Project Tasks</h2>
-                        <button className="btn btn-primary text-sm">Add Task</button>
+                        <button onClick={() => window.location.href = '/tasks'} className="btn btn-primary text-sm">Go to Tasks</button>
                     </div>
                     <div className="space-y-4">
                         {tasks.map((task, index) => (

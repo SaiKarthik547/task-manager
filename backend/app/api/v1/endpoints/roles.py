@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -7,23 +8,23 @@ from app.schemas import role as role_schemas
 
 router = APIRouter()
 
-@router.get("/", response_model=Any)
+@router.get("/")
 def read_roles(
     db: Session = Depends(deps.get_db),
     current_user: Any = Depends(deps.PermissionChecker("roles.view")),
 ):
     roles = db.query(Role).order_by(Role.is_system_role.desc(), Role.name.asc()).all()
-    return {"roles": roles}
+    return jsonable_encoder({"roles": roles})
 
-@router.get("/permissions", response_model=Any)
+@router.get("/permissions")
 def read_all_permissions(
     db: Session = Depends(deps.get_db),
     current_user: Any = Depends(deps.PermissionChecker("permissions.view")),
 ):
     permissions = db.query(Permission).order_by(Permission.resource, Permission.action).all()
-    return {"permissions": permissions}
+    return jsonable_encoder({"permissions": permissions})
 
-@router.get("/{role_id}/permissions", response_model=Any)
+@router.get("/{role_id}/permissions")
 def read_role_permissions(
     role_id: int,
     db: Session = Depends(deps.get_db),
@@ -32,9 +33,9 @@ def read_role_permissions(
     role = db.query(Role).filter(Role.id == role_id).first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
-    return {"permissions": role.permissions}
+    return jsonable_encoder({"permissions": role.permissions})
 
-@router.post("/", response_model=Any)
+@router.post("/")
 def create_role(
     role_in: role_schemas.RoleCreate,
     db: Session = Depends(deps.get_db),
@@ -54,7 +55,7 @@ def create_role(
     db.refresh(new_role)
     return {"message": "Role created", "roleId": new_role.id}
 
-@router.patch("/{role_id}", response_model=Any)
+@router.patch("/{role_id}")
 def update_role(
     role_id: int,
     role_in: role_schemas.RoleUpdate,
@@ -76,7 +77,7 @@ def update_role(
     db.commit()
     return {"message": "Role updated"}
 
-@router.post("/{role_id}/permissions", response_model=Any)
+@router.post("/{role_id}/permissions")
 def assign_permission(
     role_id: int,
     perm_data: dict, # {permissionId: int}
@@ -99,7 +100,7 @@ def assign_permission(
     db.commit()
     return {"message": "Permission assigned"}
 
-@router.delete("/{role_id}/permissions/{permission_id}", response_model=Any)
+@router.delete("/{role_id}/permissions/{permission_id}")
 def remove_permission(
     role_id: int,
     permission_id: int,
@@ -120,7 +121,7 @@ def remove_permission(
     
     return {"message": "Permission removed"}
 
-@router.delete("/{role_id}", response_model=Any)
+@router.delete("/{role_id}")
 def delete_role(
     role_id: int,
     db: Session = Depends(deps.get_db),

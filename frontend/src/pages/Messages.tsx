@@ -109,10 +109,18 @@ export default function Messages() {
 
     const startNewChat = async (recipientId: number) => {
         try {
-            await messagesAPI.createConversation(recipientId);
+            const res = await messagesAPI.createConversation(recipientId);
             setShowNewChatModal(false);
-            await loadConversations();
-            // TODO: Select the new conversation automatically
+
+            // Reload conversations to get the updated list
+            const convRes = await messagesAPI.getConversations();
+            setConversations(convRes.data.conversations);
+
+            // Find and select the newly created conversation
+            const newConv = convRes.data.conversations.find((c: any) => c.id === res.data.conversationId);
+            if (newConv) {
+                loadMessages(newConv);
+            }
         } catch (error) {
             console.error('Failed to create conversation', error);
         }

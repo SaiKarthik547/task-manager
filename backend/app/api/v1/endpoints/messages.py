@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ from app.schemas import message as message_schemas
 
 router = APIRouter()
 
-@router.get("/conversations", response_model=Any)
+@router.get("/conversations")
 def read_conversations(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
@@ -38,9 +39,9 @@ def read_conversations(
         }
         result.append(conv_dict)
         
-    return {"conversations": result}
+    return jsonable_encoder({"conversations": result})
 
-@router.get("/{conversation_id}", response_model=Any)
+@router.get("/{conversation_id}")
 def read_messages(
     conversation_id: int,
     db: Session = Depends(deps.get_db),
@@ -56,9 +57,9 @@ def read_messages(
          raise HTTPException(status_code=403, detail="Not a participant")
 
     messages = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.created_at.asc()).all()
-    return {"messages": messages}
+    return jsonable_encoder({"messages": messages})
 
-@router.post("/", response_model=Any)
+@router.post("/")
 def create_conversation(
     msg_in: message_schemas.MessageCreate, # leveraging shared schema fields
     db: Session = Depends(deps.get_db),

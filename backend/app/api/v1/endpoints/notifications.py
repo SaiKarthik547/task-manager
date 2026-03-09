@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -7,15 +8,15 @@ from app.schemas import message as message_schemas # reusing NotificationRespons
 
 router = APIRouter()
 
-@router.get("/", response_model=Any)
+@router.get("/")
 def read_notifications(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
     notifications = db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.created_at.desc()).all()
-    return {"notifications": notifications}
+    return jsonable_encoder({"notifications": notifications})
 
-@router.patch("/{notification_id}/read", response_model=Any)
+@router.patch("/{notification_id}/read")
 def mark_as_read(
     notification_id: int,
     db: Session = Depends(deps.get_db),

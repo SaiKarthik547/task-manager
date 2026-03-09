@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ from app.schemas import user as user_schemas, role as role_schemas
 
 router = APIRouter()
 
-@router.get("/", response_model=Any) # Returns {users: []}
+@router.get("/") # Returns {users: []}
 def read_users(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.PermissionChecker("users.view")),
@@ -17,9 +18,9 @@ def read_users(
 ):
     users = db.query(User).offset(skip).limit(limit).all()
     # Formatting to match legacy API
-    return {"users": users}
+    return jsonable_encoder({"users": users})
 
-@router.get("/{user_id}", response_model=Any)
+@router.get("/{user_id}")
 def read_user_by_id(
     user_id: int,
     db: Session = Depends(deps.get_db),
@@ -28,9 +29,9 @@ def read_user_by_id(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"user": user}
+    return jsonable_encoder({"user": user})
 
-@router.patch("/{user_id}", response_model=Any)
+@router.patch("/{user_id}")
 def update_user(
     user_id: int,
     user_in: user_schemas.UserUpdate,
@@ -68,7 +69,7 @@ def update_user(
     db.commit()
     return {"message": "User updated"}
 
-@router.post("/{user_id}/roles", response_model=Any)
+@router.post("/{user_id}/roles")
 def assign_role(
     user_id: int,
     role_data: dict, # {roleId: int}
@@ -91,7 +92,7 @@ def assign_role(
     db.commit()
     return {"message": "Role assigned"}
 
-@router.delete("/{user_id}/roles/{role_id}", response_model=Any)
+@router.delete("/{user_id}/roles/{role_id}")
 def remove_role(
     user_id: int,
     role_id: int,
@@ -113,7 +114,7 @@ def remove_role(
     db.commit()
     return {"message": "Role removed"}
 
-@router.delete("/{user_id}", response_model=Any)
+@router.delete("/{user_id}")
 def delete_user(
     user_id: int,
     db: Session = Depends(deps.get_db),
