@@ -25,14 +25,12 @@ A production-ready, 100% free, self-hosted **Enterprise Task Management Platform
 
 ## ✨ Features
 
-### 🚀 Production-Grade Implementation Updates
-✅ **System-Wide Dark Mode** - Premium dynamic theming implemented with Tailwind CSS and saved user preferences.
-✅ **Interactive Kanban Boards** - True HTML5 Drag-and-Drop functionality built directly into Manager and Employee dashboards for seamless task progression.
-✅ **Robust Authentication** - Fixed Python 3.12+ legacy `passlib` issues by migrating to direct `bcrypt` hashing for 100% login success.
-✅ **Real-Time Direct Messaging** - Re-architected Socket.io implementation to deliver messages instantly to private `user_{id}` rooms, complete with fixed selection workflows.
-✅ **Enterprise Scalability** - SQLite upgraded to Write-Ahead Logging (WAL) mode to handle high-frequency concurrent socket reads/writes without database locking.
-✅ **Data Consistency** - All FastApi endpoints fully patched with `jsonable_encoder` to eliminate 500 Pydantic formatting errors.
-✅ **Offline Notifications** - Real-time chat activity seamlessly triggers persistent database notifications when users are interacting.
+✅ **Advanced Analytics Dashboard** - Real-time data visualization using Recharts. Track Task Completion Rates, Project Health Distribution (Green/Yellow/Red), and detailed productivity timelines.
+✅ **Global Search Engine** - SQL-based high-performance search for Tasks and Projects with built-in RBAC filtering.
+✅ **Automated Background Jobs** - Integrated APScheduler for hourly project health recalculations, daily deadline reminders, and weekly system cleanup.
+✅ **Organizational Hierarchy** - Enhanced RBAC with Manager-Employee relationships. Employees now automatically see their allocated managers and teammates.
+✅ **Task Workflow Engine** - Server-side validation for status transitions and dependency blocking (prevents starting tasks if predecessors are incomplete).
+✅ **System Synchronization** - 100% field alignment between Backend and Frontend (aligned `fullName` and `is_active` logic).
 
 ### Core Functionality
 ✅ **100% Free & Open-Source** - No paid dependencies or licensing fees  
@@ -192,7 +190,8 @@ graph TB
 | Auth | python-jose | 3.3.0+ | JWT token creation/validation |
 | Password | passlib + bcrypt | 1.7.4+ | Secure password hashing |
 | Real-time | python-socketio | 5.11.0+ | WebSocket communication |
-| Database | SQLite (Dev) | - | Lightweight local database |
+| Scheduling | APScheduler | 3.10.4+ | Recurring background jobs |
+| Database | SQLite (Dev) | - | Lightweight local database (WAL mode) |
 | Database | PostgreSQL | (Optional) | Production database |
 
 ### Frontend
@@ -204,6 +203,7 @@ graph TB
 | Routing | React Router | 7.1.3+ | Client-side routing |
 | HTTP Client | Axios | 1.6.5+ | Promise-based HTTP client |
 | Real-time | Socket.IO Client | 4.6.1+ | WebSocket client |
+| Visualization | Recharts | 2.10.0+ | Interactive charts & graphs |
 | CSS Framework | Tailwind CSS | 4.0+ | Utility-first CSS |
 | Linting | ESLint | 9.39.1+ | Code quality |
 
@@ -225,6 +225,7 @@ graph TB
 - email: VARCHAR(100) UNIQUE
 - password_hash: VARCHAR(255) bcrypt hashed
 - full_name: VARCHAR(100)
+- manager_id: INTEGER (FK → users, self-referential)
 - is_active: INTEGER (0=inactive, 1=active)
 - created_at: DATETIME
 - updated_at: DATETIME
@@ -259,6 +260,7 @@ graph TB
 - priority: VARCHAR(20) (low|medium|high|critical)
 - start_date: DATE
 - end_date: DATE
+- health: VARCHAR(20) (green|yellow|red)
 - health_score: INTEGER (0-100)
 - created_at: DATETIME
 - updated_at: DATETIME
@@ -465,6 +467,12 @@ VITE_API_URL=http://localhost:8000
 - **GET** `/api/v1/notifications` - Get notifications
 - **PATCH** `/api/v1/notifications/{notification_id}/read` - Mark as read
 
+### Search & Analytics
+- **GET** `/api/v1/search` - Global search across tasks and projects
+- **GET** `/api/v1/analytics/overview` - High-level system stats
+- **GET** `/api/v1/analytics/project-health` - Health distribution
+- **GET** `/api/v1/analytics/tasks-completion-timeline` - Productivity metrics
+
 ---
 
 ## 🔐 Permission Matrix
@@ -580,6 +588,8 @@ task manager/
 │   │   │           ├── projects.py   # Project operations
 │   │   │           ├── tasks.py      # Task operations
 │   │   │           ├── messages.py   # Messaging system
+│   │   │           ├── search.py     # Global search engine
+│   │   │           ├── analytics.py  # Data visualization
 │   │   │           └── notifications.py  # Notifications
 │   │   ├── core/
 │   │   │   ├── config.py             # Configuration management
@@ -594,13 +604,15 @@ task manager/
 │   │   │   ├── project.py            # Project, Task models
 │   │   │   ├── messaging.py          # Conversation, Message
 │   │   │   └── system.py             # Notification, AuditLog
+│   │   ├── services/                 # Business Logic Layer
+│   │   │   └── task_service.py       # Workflow & dependency engine
 │   │   └── schemas/                  # Pydantic request/response models
 │   │       ├── auth.py, user.py, role.py
 │   │       ├── project.py, message.py
 │   │       └── user.py
 │   ├── requirements.txt               # Python dependencies
 │   ├── run_backend.ps1               # Windows startup script
-│   └── database.sqlite               # SQLite database (auto-created)
+│   └── task_manager_v2.sqlite        # SQLite database (Latest)
 │
 ├── frontend/                         # React TypeScript frontend
 │   ├── src/
@@ -647,15 +659,16 @@ The database has been seeded with multiple test users to evaluate the Role-Based
 | Username | Password | Role | Access Level |
 |----------|----------|------|--------------|
 | admin    | Admin@123| Admin | Full System Access |
-| admin2   | Password@123| Admin | Full System Access |
+| admin2   | Admin@123| Admin | Full System Access |
 | manager1 | Manager@123| Manager | Project & Team Mgmt |
-| manager2 | Password@123| Manager | Project & Team Mgmt |
-| manager3 | Password@123| Manager | Project & Team Mgmt |
+| manager2 | Manager@123| Manager | Project & Team Mgmt |
+| manager3 | Manager@123| Manager | Project & Team Mgmt |
 | employee1| Employee@123| Employee | Task Execution |
-| emp2     | Password@123| Employee | Task Execution |
-| emp3     | Password@123| Employee | Task Execution |
-| emp4     | Password@123| Employee | Task Execution |
-| emp5     | Password@123| Employee | Task Execution |
+| employee2| Employee@123| Employee | Task Execution |
+| emp2     | Employee@123| Employee | Team 2 Member |
+| emp3     | Employee@123| Employee | Team 2 Member |
+| emp4     | Employee@123| Employee | Team 3 Member |
+| emp5     | Employee@123| Employee | Team 3 Member |
 
 ---
 
