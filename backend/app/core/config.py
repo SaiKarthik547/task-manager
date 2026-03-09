@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # Database
-    DATABASE_URL: str = "sqlite:///./database.sqlite"
+    DATABASE_URL: str = "sqlite:///./task_manager_v2.sqlite"
 
     class Config:
         case_sensitive = True

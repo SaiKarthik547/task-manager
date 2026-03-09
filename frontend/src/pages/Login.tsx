@@ -12,17 +12,26 @@ export default function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        await attemptLogin(username, password);
+    };
+
+    const attemptLogin = async (user: string, pass: string) => {
         setError('');
         setLoading(true);
-
         try {
-            await login(username, password);
+            await login(user, pass);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDemoLogin = (user: string, pass: string) => {
+        setUsername(user);
+        setPassword(pass);
+        attemptLogin(user, pass);
     };
 
     return (
@@ -117,19 +126,40 @@ export default function Login() {
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                             </svg>
                             <div className="flex-1">
-                                <p className="text-sm font-bold text-primary-900 mb-3">Demo Credentials:</p>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between items-center p-2 bg-white/40 rounded-lg">
-                                        <span className="font-semibold text-purple-700">Admin:</span>
-                                        <code className="text-xs bg-purple-100 px-2 py-1 rounded">admin / Admin@123</code>
+                                <p className="text-sm font-bold text-primary-900 mb-2">1-Click Demo Login</p>
+                                <div className="space-y-3">
+                                    <div>
+                                        <span className="text-xs font-semibold text-purple-800 uppercase tracking-wider mb-1 block">Admins</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['admin', 'admin2'].map(u => (
+                                                <button key={u} type="button" onClick={() => handleDemoLogin(u, 'Admin@123')}
+                                                    className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-full text-xs font-medium transition cursor-pointer border border-purple-200 shadow-sm">
+                                                    {u}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center p-2 bg-white/40 rounded-lg">
-                                        <span className="font-semibold text-blue-700">Manager:</span>
-                                        <code className="text-xs bg-blue-100 px-2 py-1 rounded">manager1 / Manager@123</code>
+                                    <div>
+                                        <span className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1 block">Managers</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['manager1', 'manager2', 'manager3'].map(u => (
+                                                <button key={u} type="button" onClick={() => handleDemoLogin(u, 'Manager@123')}
+                                                    className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-full text-xs font-medium transition cursor-pointer border border-blue-200 shadow-sm">
+                                                    {u}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center p-2 bg-white/40 rounded-lg">
-                                        <span className="font-semibold text-green-700">Employee:</span>
-                                        <code className="text-xs bg-green-100 px-2 py-1 rounded">employee1 / Employee@123</code>
+                                    <div>
+                                        <span className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-1 block">Employees</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['employee1', 'employee2', 'emp2', 'emp3', 'emp4', 'emp5'].map(u => (
+                                                <button key={u} type="button" onClick={() => handleDemoLogin(u, 'Employee@123')}
+                                                    className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded-full text-xs font-medium transition cursor-pointer border border-green-200 shadow-sm">
+                                                    {u}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

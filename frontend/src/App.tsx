@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import ProjectDetails from './pages/ProjectDetails';
 import Projects from './pages/Projects';
 import Tasks from './pages/Tasks';
+import Analytics from './pages/Analytics';
 import Users from './pages/admin/Users';
 import Roles from './pages/admin/Roles';
 import './index.css';
@@ -36,14 +37,6 @@ function App() {
               }
             />
             <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/admin/users"
               element={
                 <ProtectedRoute>
@@ -59,6 +52,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/*" element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            } />
             <Route
               path="/manager"
               element={

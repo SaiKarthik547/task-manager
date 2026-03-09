@@ -1,10 +1,12 @@
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal, engine
+from app.core.database import SessionLocal, engine, Base
 from app.models import User, Role, Permission, Project, Task, SystemSettings, user_roles, role_permissions
 from app.core.security import get_password_hash
 from datetime import datetime, timedelta, date
 
 def seed_db():
+    print("🔧 Ensuring database schema is up to date...")
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         print("🌱 Seeding database...")
@@ -126,15 +128,27 @@ def seed_db():
              print("✅ Employee permissions assigned")
 
         # 4. Users
-        users_data = [
+        users_raw = [
              {'username': 'admin', 'email': 'admin@localhost.local', 'password': 'Admin@123', 'full_name': 'System Administrator', 'role': 'Admin'},
-             {'username': 'manager1', 'email': 'manager@localhost.local', 'password': 'Manager@123', 'full_name': 'John Manager', 'role': 'Manager'},
-             {'username': 'employee1', 'email': 'employee1@localhost.local', 'password': 'Employee@123', 'full_name': 'Alice Employee', 'role': 'Employee'},
-             {'username': 'employee2', 'email': 'employee2@localhost.local', 'password': 'Employee@123', 'full_name': 'Mary Employee', 'role': 'Employee'},
+             {'username': 'admin2', 'email': 'admin2@localhost.local', 'password': 'Admin@123', 'full_name': 'Second Admin', 'role': 'Admin'},
+             
+             {'username': 'manager1', 'email': 'manager1@localhost.local', 'password': 'Manager@123', 'full_name': 'John Manager', 'role': 'Manager'},
+             {'username': 'manager2', 'email': 'manager2@localhost.local', 'password': 'Manager@123', 'full_name': 'Sarah Manager', 'role': 'Manager'},
+             {'username': 'manager3', 'email': 'manager3@localhost.local', 'password': 'Manager@123', 'full_name': 'David Manager', 'role': 'Manager'},
+             
+             {'username': 'employee1', 'email': 'employee1@localhost.local', 'password': 'Employee@123', 'full_name': 'Alice Employee', 'role': 'Employee', 'manager': 'manager1'},
+             {'username': 'employee2', 'email': 'employee2@localhost.local', 'password': 'Employee@123', 'full_name': 'Mary Employee', 'role': 'Employee', 'manager': 'manager1'},
+             {'username': 'emp2', 'email': 'emp2@localhost.local', 'password': 'Employee@123', 'full_name': 'James Employee', 'role': 'Employee', 'manager': 'manager2'},
+             {'username': 'emp3', 'email': 'emp3@localhost.local', 'password': 'Employee@123', 'full_name': 'Linda Employee', 'role': 'Employee', 'manager': 'manager2'},
+             {'username': 'emp4', 'email': 'emp4@localhost.local', 'password': 'Employee@123', 'full_name': 'Robert Employee', 'role': 'Employee', 'manager': 'manager3'},
+             {'username': 'emp5', 'email': 'emp5@localhost.local', 'password': 'Employee@123', 'full_name': 'Patricia Employee', 'role': 'Employee', 'manager': 'manager3'},
         ]
 
-        for u_data in users_data:
-            if not db.query(User).filter(User.username == u_data['username']).first():
+        # First pass: Create users
+        user_objs = {}
+        for u_data in users_raw:
+            user = db.query(User).filter(User.username == u_data['username']).first()
+            if not user:
                 user = User(
                     username=u_data['username'],
                     email=u_data['email'],
@@ -150,55 +164,40 @@ def seed_db():
                 if role:
                     user.roles.append(role)
                     db.commit()
-        print(f"✅ Created {len(users_data)} users")
+            user_objs[u_data['username']] = user
 
-        # 5. Sample Data
-        if db.query(Project).count() == 0:
-            manager = db.query(User).filter(User.username == 'manager1').first()
-            if manager:
-                project = Project(
-                    name='Website Redesign',
-                    description='Redesign company website with modern UI',
-                    owner_id=manager.id,
-                    status='active',
-                    priority='high',
-                    start_date=date(2026, 1, 20),
-                    end_date=date(2026, 3, 20)
-                )
-                db.add(project)
-                db.commit()
-                db.refresh(project)
-                print("✅ Created sample project")
+        # Second pass: Assign managers
+        for u_data in users_raw:
+            if 'manager' in u_data:
+                user = user_objs[u_data['username']]
+                manager = user_objs.get(u_data['manager'])
+                if manager:
+                    user.manager_id = manager.id
+        db.commit()
+        print(f"✅ Created/Verified {len(users_raw)} users with manager mappings")
 
-                emp1 = db.query(User).filter(User.username == 'employee1').first()
-                if emp1:
-                    task1 = Task(
-                        title='Design Homepage Mockup',
-                        description='Create wireframes and mockups',
-                        project_id=project.id,
-                        assigned_to=emp1.id,
-                        created_by=manager.id,
-                        status='in_progress',
-                        priority='high',
-                        due_date=datetime(2026, 1, 30)
-                    )
-                    db.add(task1)
-                
-                emp2 = db.query(User).filter(User.username == 'employee2').first()
-                if emp2:
-                    task2 = Task(
-                        title='Setup Development Environment',
-                        description='Configure Next.js project',
-                        project_id=project.id,
-                        assigned_to=emp2.id,
-                        created_by=manager.id,
-                        status='completed',
-                        priority='medium',
-                        due_date=datetime(2026, 1, 25)
-                    )
-                    db.add(task2)
-                db.commit()
-                print("✅ Created sample tasks")
+        # 5. Sample Data (Expanded)
+        if db.query(Project).count() <= 1:
+            m1 = user_objs['manager1']
+            m2 = user_objs['manager2']
+            
+            p1 = Project(name='Website Redesign', description='Modern UI for company site', owner_id=m1.id, status='active', priority='high', start_date=date(2026, 1, 20), end_date=date(2026, 3, 20), health='green')
+            p2 = Project(name='Mobile App v2', description='New React Native app', owner_id=m2.id, status='active', priority='medium', start_date=date(2026, 2, 5), end_date=date(2026, 5, 20), health='yellow')
+            db.add_all([p1, p2])
+            db.commit()
+            db.refresh(p1)
+            db.refresh(p2)
+
+            # Assign tasks to all employees so they see SOMETHING
+            tasks = [
+                Task(title='Design Homepage', project_id=p1.id, assigned_to=user_objs['employee1'].id, created_by=m1.id, status='completed', due_date=datetime.now() - timedelta(days=2)),
+                Task(title='Setup API', project_id=p1.id, assigned_to=user_objs['employee2'].id, created_by=m1.id, status='in_progress', due_date=datetime.now() + timedelta(days=5)),
+                Task(title='Login Screen', project_id=p2.id, assigned_to=user_objs['emp2'].id, created_by=m2.id, status='in_progress', due_date=datetime.now() - timedelta(days=1)), # Overdue
+                Task(title='Push Notifications', project_id=p2.id, assigned_to=user_objs['emp3'].id, created_by=m2.id, status='not_started', due_date=datetime.now() + timedelta(days=10)),
+            ]
+            db.add_all(tasks)
+            db.commit()
+            print("✅ Created expanded sample projects and tasks")
         
         # System Settings
         if db.query(SystemSettings).count() == 0:

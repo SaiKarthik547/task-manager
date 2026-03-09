@@ -27,6 +27,7 @@ class Project(Base):
     priority = Column(String(20), default='medium')
     start_date = Column(Date)
     end_date = Column(Date)
+    health = Column(String(20), default='green')
     health_score = Column(Integer, default=100)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

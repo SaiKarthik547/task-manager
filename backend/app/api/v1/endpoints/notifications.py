@@ -10,10 +10,14 @@ router = APIRouter()
 
 @router.get("/")
 def read_notifications(
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
-    notifications = db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.created_at.desc()).all()
+    notifications = db.query(Notification).filter(
+        Notification.user_id == current_user.id
+    ).order_by(desc(Notification.created_at)).offset(skip).limit(limit).all()
     return jsonable_encoder({"notifications": notifications})
 
 @router.patch("/{notification_id}/read")

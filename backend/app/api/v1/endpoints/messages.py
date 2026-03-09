@@ -11,6 +11,8 @@ router = APIRouter()
 
 @router.get("/conversations")
 def read_conversations(
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
@@ -20,7 +22,7 @@ def read_conversations(
     # Inverse relationship in User? "conversations = relationship(...)"
     # Let's query Conversation directly joined with participants
     
-    conversations = db.query(Conversation).join(Conversation.participants).filter(User.id == current_user.id).all()
+    conversations = db.query(Conversation).join(Conversation.participants).filter(User.id == current_user.id).offset(skip).limit(limit).all()
     
     # Enrich with last message
     # TODO: Optimize with subquery
@@ -33,6 +35,7 @@ def read_conversations(
             "id": conv.id,
             "type": conv.type,
             "name": conv.name,
+            "participants": [{"id": p.id, "full_name": p.full_name, "username": p.username} for p in conv.participants],
             "updated_at": last_msg.created_at if last_msg else conv.created_at,
             "last_message": last_msg.content_encrypted if last_msg else None,
             "last_message_at": last_msg.created_at if last_msg else None
@@ -44,6 +47,8 @@ def read_conversations(
 @router.get("/{conversation_id}")
 def read_messages(
     conversation_id: int,
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
@@ -56,7 +61,7 @@ def read_messages(
     if not is_participant:
          raise HTTPException(status_code=403, detail="Not a participant")
 
-    messages = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.created_at.asc()).all()
+    messages = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.created_at.asc()).offset(skip).limit(limit).all()
     return jsonable_encoder({"messages": messages})
 
 @router.post("/")

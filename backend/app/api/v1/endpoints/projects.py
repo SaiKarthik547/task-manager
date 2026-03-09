@@ -15,25 +15,51 @@ def read_projects(
     skip: int = 0,
     limit: int = 100
 ):
-    # Filter? If not admin/manager, maybe only show 'my' projects?
-    # For now, legacy seemed to show all or based on permissions?
-    # Let's show all for now, or filter by membership?
-    # Schema check: Users.view -> maybe needed?
-    # Legacy check: requirePermission('projects.view')
-    deps.PermissionChecker("projects.view")(current_user)
+    has_view_all = False
+    try:
+        deps.PermissionChecker("projects.view")(current_user)
+        has_view_all = True
+    except HTTPException:
+        pass
+        
+    is_admin_or_manager = any(r.name in ["Admin", "Manager"] for r in current_user.roles)
     
-    projects = db.query(Project).offset(skip).limit(limit).all()
+    if has_view_all or is_admin_or_manager:
+        projects = db.query(Project).offset(skip).limit(limit).all()
+    else:
+        # Employee: Only see projects where they are owner, member, or have a task
+        from app.models.project import Task
+        
+        member_proj_ids = db.query(project_members.c.project_id).filter(project_members.c.user_id == current_user.id)
+        task_proj_ids = db.query(Task.project_id).filter(Task.assigned_to == current_user.id)
+        
+        projects = db.query(Project).filter(
+            (Project.owner_id == current_user.id) | 
+            (Project.id.in_(member_proj_ids)) | 
+            (Project.id.in_(task_proj_ids))
+        ).offset(skip).limit(limit).all()
+        
     return jsonable_encoder({"projects": projects})
 
 @router.get("/{project_id}")
 def read_project(
     project_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.PermissionChecker("projects.view")),
+    current_user: User = Depends(deps.get_current_active_user),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+        
+    # Employees can only view if they are associated
+    is_admin_or_manager = any(r.name in ["Admin", "Manager"] for r in current_user.roles)
+    if not is_admin_or_manager:
+        from app.models.project import Task
+        is_member = db.query(project_members).filter_by(project_id=project_id, user_id=current_user.id).first() is not None
+        has_task = db.query(Task).filter_by(project_id=project_id, assigned_to=current_user.id).first() is not None
+        if project.owner_id != current_user.id and not is_member and not has_task:
+             raise HTTPException(status_code=403, detail="Not enough permissions to view this project")
+
     return jsonable_encoder({"project": project})
 
 @router.post("/")
@@ -171,13 +197,22 @@ def remove_member(
 def read_project_tasks(
     project_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.PermissionChecker("tasks.view_all")),
+    current_user: User = Depends(deps.get_current_active_user),
 ):
-    # Or check membership? Legacy checks 'tasks.view_all' generic permission or similar?
-    # Checking "tasks.view_all" might be too strict if I only want to view tasks in MY project.
-    # But for now let's stick to permissions.
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
+    # RBAC: Employees can only view if they are associated
+    is_admin_or_manager = any(r.name in ["Admin", "Manager"] for r in current_user.roles)
+    if not is_admin_or_manager:
+        from app.models.project import Task
+        is_member = db.query(project_members).filter_by(project_id=project_id, user_id=current_user.id).first() is not None
+        has_task = db.query(Task).filter_by(project_id=project_id, assigned_to=current_user.id).first() is not None
+        if project.owner_id != current_user.id and not is_member and not has_task:
+             raise HTTPException(status_code=403, detail="Not enough permissions to view tasks for this project")
+             
+        # Optional: return ONLY tasks assigned to them? The UI usually expects all tasks in the project board
+        # if they have access to the board. We will return all project tasks to allow collaboration visibility.
+
     return jsonable_encoder({"tasks": project.tasks})

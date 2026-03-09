@@ -101,11 +101,11 @@ def read_users_me(
             "id": current_user.id,
             "username": current_user.username,
             "email": current_user.email,
-            "full_name": current_user.full_name,
+            "fullName": current_user.full_name, # Frontend expects fullName
+            "roleIds": role_ids,
+            "permissions": permissions,
             "is_active": current_user.is_active,
             "created_at": current_user.created_at,
             "last_login": current_user.last_login,
-            "roles": [r.name for r in current_user.roles], # Frontend might expect role objects or names? Legacy returned plain user object?
-            # Legacy /me returned: { user: { ... } }
         }
     }

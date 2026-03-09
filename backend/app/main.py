@@ -1,9 +1,13 @@
 import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os # Added by instruction
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.socket import sio
+from app.db.init_db import init_db
+from app.core.jobs import start_jobs
+from app.core.middlewares import RequestLoggingMiddleware, limiter, _rate_limit_exceeded_handler, RateLimitExceeded
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -21,6 +25,19 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+app.add_middleware(RequestLoggingMiddleware)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Added by instruction
+@app.on_event("startup")
+async def startup_event():
+    # Initialize DB (creates tables if missing)
+    init_db()
+    # Start background scheduler
+    start_jobs()
+    print("Startup complete. Database seeded if it was empty. Background Jobs Started.")
 
 @app.get("/")
 def root():

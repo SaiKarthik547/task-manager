@@ -60,27 +60,9 @@ export default function Messages() {
     const loadUsers = async () => {
         try {
             const res = await usersAPI.getAll();
-            let availableUsers = res.data.users.filter((u: any) => u.id !== user?.id);
-
-            // Enforce Role-Based Messaging Constraints
-            // Assuming default role IDs: 1 (Admin), 2 (Manager), 3 (Employee)
-
-            const isEmployee = user?.roleIds?.includes(3);
-            const isManager = user?.roleIds?.includes(2);
-
-            if (isEmployee) {
-                // Employees only see managers and admin
-                availableUsers = availableUsers.filter((u: any) =>
-                    u.roles?.some((r: any) => r.name === 'manager' || r.name === 'admin')
-                );
-            } else if (isManager) {
-                // Managers see employees and admin
-                availableUsers = availableUsers.filter((u: any) =>
-                    u.roles?.some((r: any) => r.name === 'employee' || r.name === 'admin')
-                );
-            }
-            // Admin (roleIds.includes(1)) sees everyone (no filter logic needed)
-
+            // Backend now filters list correctly based on project topology.
+            // We just need to hide the current user from their own list.
+            const availableUsers = res.data.users.filter((u: any) => u.id !== user?.id);
             setUsers(availableUsers);
         } catch (error) {
             console.error('Failed to load users', error);
@@ -196,8 +178,13 @@ export default function Messages() {
                     {activeConversation ? (
                         <>
                             {/* Chat Header */}
-                            <div className="p-4 border-b border-gray-100 bg-white/60">
-                                <h3 className="font-bold text-gray-800">Conversation #{activeConversation.id}</h3>
+                            <div className="p-4 border-b border-gray-100 bg-white/60 flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold mr-3 text-sm">
+                                    {activeConversation.participants?.find((p: any) => p.id !== user?.id)?.full_name?.charAt(0) || '?'}
+                                </div>
+                                <h3 className="font-bold text-gray-800">
+                                    {activeConversation.participants?.find((p: any) => p.id !== user?.id)?.full_name || `Conversation #${activeConversation.id}`}
+                                </h3>
                             </div>
 
                             {/* Messages */}

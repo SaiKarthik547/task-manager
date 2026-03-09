@@ -100,6 +100,17 @@ export const messagesAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-    getAll: () => api.get('/notifications'),
-    markAsRead: (id: number) => api.patch(`/notifications/${id}/read`),
+    getAll: () => api.get('/notifications/'),
+    markRead: (id: number) => api.patch(`/notifications/${id}/read`),
+    markAllRead: () => api.post('/notifications/read-all'),
+};
+
+export const searchAPI = {
+    query: (q: string) => api.get(`/search/?q=${encodeURIComponent(q)}`)
+};
+
+export const analyticsAPI = {
+    getOverview: () => api.get('/analytics/overview'),
+    getProjectHealth: () => api.get('/analytics/project-health'),
+    getTasksTimeline: () => api.get('/analytics/tasks-completion-timeline')
 };

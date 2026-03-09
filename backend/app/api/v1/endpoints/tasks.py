@@ -1,11 +1,12 @@
 from fastapi.encoders import jsonable_encoder
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from app.api import deps
-from app.models import Task, User, TaskComment, Notification
+from app.models import Task, User, TaskComment, Notification, TaskAttachment
 from app.schemas import project as project_schemas
 from app.core.socket import sio
+from app.services.task_service import task_service
 
 router = APIRouter()
 
@@ -14,19 +15,21 @@ def read_tasks(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
-    # Filter by permission
-    # If Admin/Manager (view_all) -> return all
-    # If Employee -> return assigned_to or project member?
-    # Simple logic: check 'tasks.view_all'. If yes, all. Else, assigned_to me.
+    # Instead of using the Dependency which raises 403 directly, 
+    # we manually check if the user has the 'tasks.view_all' permission mapped.
+    # Since permissions are loaded into the JWT and user obj, we can query it safely.
     
-    has_view_all = False
-    try:
-        deps.PermissionChecker("tasks.view_all")(current_user)
-        has_view_all = True
-    except HTTPException:
-        pass
+    # Alternatively, just check if they are Admin or Manager via Role ID:
+    # 1: Admin, 2: Manager, 3: Employee
     
-    if has_view_all:
+    is_admin_or_manager = False
+    if current_user.roles:
+        for role in current_user.roles:
+            if role.name in ["Admin", "Manager"]:
+                is_admin_or_manager = True
+                break
+                
+    if is_admin_or_manager:
         tasks = db.query(Task).all()
     else:
         tasks = db.query(Task).filter(Task.assigned_to == current_user.id).all()
@@ -63,50 +66,17 @@ async def create_task(
     
     # Real-time notification and event emission
     if task.assigned_to:
-        # Create notification
-        notification = Notification(
+        # Create notification and emit event
+        await task_service.create_and_emit_notification(
+            db=db,
             user_id=task.assigned_to,
-            type="task_assigned",
+            notif_type="task_assigned",
             title="New Task Assigned",
-            content=f"You were assigned '{task.title}'",
-            is_read=0
+            content=f"You were assigned '{task.title}'"
         )
-        db.add(notification)
-        db.commit()
-        db.refresh(notification)
 
         # Emit task_created event
-        await sio.emit(
-            "task_created",
-            {
-                "task": {
-                    "id": task.id,
-                    "title": task.title,
-                    "description": task.description,
-                    "status": task.status,
-                    "priority": task.priority,
-                    "assigned_to": task.assigned_to,
-                    "project_id": task.project_id,
-                    "due_date": task.due_date.isoformat() if task.due_date else None,
-                    "created_by": task.created_by
-                }
-            },
-            room=f"user_{task.assigned_to}"
-        )
-
-        # Emit notification_created event
-        await sio.emit(
-            "notification_created",
-            {
-                "id": notification.id,
-                "type": notification.type,
-                "title": notification.title,
-                "content": notification.content,
-                "created_at": notification.created_at.isoformat(),
-                "is_read": notification.is_read
-            },
-            room=f"user_{task.assigned_to}"
-        )
+        await task_service.emit_task_created(task)
         
     return jsonable_encoder({"task": task, "message": "Task created"})
 
@@ -140,6 +110,12 @@ async def update_task(
     if not (has_edit_all or (is_assigned and can_edit_own)):
          raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    # Use TaskService for business logic constraints if status is changing
+    if task_in.status and task_in.status != task.status:
+        task_service.validate_status_transition(task.status, task_in.status)
+        if task_in.status == "in_progress":
+            task_service.check_dependencies(db, task.id)
+
     for field, value in task_in.model_dump(exclude_unset=True).items():
         setattr(task, field, value)
     
@@ -148,23 +124,7 @@ async def update_task(
     
     # Emit task_updated event
     if task.assigned_to:
-        await sio.emit(
-            "task_updated",
-            {
-                "task": {
-                    "id": task.id,
-                    "title": task.title,
-                    "description": task.description,
-                    "status": task.status,
-                    "priority": task.priority,
-                    "assigned_to": task.assigned_to,
-                    "project_id": task.project_id,
-                    "due_date": task.due_date.isoformat() if task.due_date else None,
-                    "created_by": task.created_by
-                }
-            },
-            room=f"user_{task.assigned_to}"
-        )
+        await task_service.emit_task_updated(task)
         
     return jsonable_encoder({"task": task, "message": "Task updated"})
 
@@ -192,6 +152,53 @@ def read_comments(
     comments = db.query(TaskComment).filter(TaskComment.task_id == task_id).all()
     return {"comments": comments}
 
+@router.post("/{task_id}/attachments")
+async def create_attachment(
+    task_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """
+    Upload a file attachment for a task with size and type validation.
+    """
+    # 1. Validate MIME Type
+    ALLOWED_TYPES = [
+        "image/jpeg", "image/png", 
+        "application/pdf", 
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", # docx
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" # xlsx
+    ]
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=400, 
+            detail="File type not supported. Use JPG, PNG, PDF, DOCX, or XLSX."
+        )
+
+    # 2. Validate Size (10MB max)
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+    await file.seek(0) # Reset pointer
+    
+    # 3. Sanitize and save
+    file_path = f"uploads/{task_id}_{file.filename.replace(' ', '_')}"
+    
+    # Mock saving to disk
+    with open(file_path, "wb") as buffer:
+        buffer.write(content)
+        
+    attachment = TaskAttachment(
+        task_id=task_id,
+        file_name=file.filename,
+        file_path=file_path,
+        uploaded_by=current_user.id
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return jsonable_encoder(attachment)
+
 @router.post("/{task_id}/comments")
 async def create_comment(
     task_id: int,
@@ -215,23 +222,15 @@ async def create_comment(
     # If the task is assigned, emit to the assignee
     task = db.query(Task).filter(Task.id == task_id).first()
     if task and task.assigned_to:
-        await sio.emit(
-            "task_comment_created",
-            {
-                "taskId": task_id,
-                "comment": {
-                    "id": comment.id,
-                    "comment": comment.comment,
-                    "created_at": comment.created_at.isoformat(),
-                    "user": {
-                        "id": current_user.id,
-                        "full_name": current_user.full_name,
-                        "username": current_user.username
-                    }
-                }
-            },
-            room=f"user_{task.assigned_to}"
-        )
+        await task_service.emit_task_comment_created(task, comment, current_user)
+        
+    # Process Mentions using TaskService
+    await task_service.process_mentions(
+        db=db,
+        content=comment.comment,
+        sender_name=current_user.full_name,
+        task_title=task.title if task else f"Task #{task_id}"
+    )
     
     return {
         "comment": comment,

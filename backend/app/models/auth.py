@@ -27,8 +27,10 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_login = Column(DateTime(timezone=True))
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     roles = relationship("Role", secondary=user_roles, back_populates="users")
+    manager = relationship("User", remote_side=[id], backref="subordinates")
     
     # Relationships from other modules will be defined there or using backref
 
