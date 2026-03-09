@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { analyticsAPI } from '../lib/api';
 import Layout from '../components/Layout';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 
@@ -21,7 +20,6 @@ interface AnalyticsData {
 const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6']; // Green, Yellow, Red, Purple
 
 export default function AnalyticsDashboard() {
-    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [error, setError] = useState<string | null>(null);
