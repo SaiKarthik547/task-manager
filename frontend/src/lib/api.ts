@@ -95,7 +95,7 @@ export const tasksAPI = {
 export const messagesAPI = {
     getConversations: () => api.get('/messages/conversations'),
     getMessages: (conversationId: number) => api.get(`/messages/${conversationId}`),
-    createConversation: (recipientId: number) => api.post('/messages', { recipientId }),
+    createConversation: (recipientId: number) => api.post('/messages', { recipient_id: recipientId, content: "Started a new conversation" }),
 };
 
 // Notifications API

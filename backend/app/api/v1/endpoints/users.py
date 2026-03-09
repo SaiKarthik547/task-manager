@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get("/") # Returns {users: []}
 def read_users(
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.PermissionChecker("users.view")),
+    current_user: User = Depends(deps.get_current_active_user),
     skip: int = 0,
     limit: int = 100
 ):

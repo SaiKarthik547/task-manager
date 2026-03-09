@@ -5,6 +5,9 @@ import Layout from '../../components/Layout';
 export default function Roles() {
     const [roles, setRoles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [expandedRole, setExpandedRole] = useState<number | null>(null);
+    const [rolePermissions, setRolePermissions] = useState<any[]>([]);
+    const [loadingPermissions, setLoadingPermissions] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -18,6 +21,25 @@ export default function Roles() {
             console.error('Failed to load roles', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const togglePermissions = async (roleId: number) => {
+        if (expandedRole === roleId) {
+            setExpandedRole(null);
+            return;
+        }
+
+        setExpandedRole(roleId);
+        setLoadingPermissions(true);
+        try {
+            const res = await rolesAPI.getRolePermissions(roleId);
+            setRolePermissions(res.data.permissions || []);
+        } catch (error) {
+            console.error('Failed to load permissions', error);
+            setRolePermissions([]);
+        } finally {
+            setLoadingPermissions(false);
         }
     };
 
@@ -39,10 +61,6 @@ export default function Roles() {
                         <h1 className="text-3xl font-bold text-gray-800">Role Management</h1>
                         <p className="text-gray-600">Configure system access levels</p>
                     </div>
-                    {/* Placeholder for future implementation */}
-                    <button className="btn btn-secondary opacity-50 cursor-not-allowed">
-                        Coming Soon (System Roles Only)
-                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -62,9 +80,30 @@ export default function Roles() {
 
                             <div className="border-t border-gray-100 pt-4">
                                 <p className="text-xs text-gray-400 uppercase font-semibold mb-2">Permissions</p>
-                                <div className="text-sm text-primary-600 font-medium cursor-pointer hover:underline">
-                                    View Assigned Permissions →
+                                <div
+                                    className="text-sm text-primary-600 font-medium cursor-pointer hover:underline mb-3"
+                                    onClick={() => togglePermissions(role.id)}
+                                >
+                                    {expandedRole === role.id ? 'Hide Permissions ↑' : 'View Assigned Permissions ↓'}
                                 </div>
+
+                                {expandedRole === role.id && (
+                                    <div className="bg-gray-50 rounded-lg p-3 mt-2 animate-fade-in text-sm">
+                                        {loadingPermissions ? (
+                                            <div className="text-gray-500 text-center py-2">Loading...</div>
+                                        ) : rolePermissions.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {rolePermissions.map((perm) => (
+                                                    <span key={perm.id} className="badge badge-purple text-xs">
+                                                        {perm.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-500 text-xs italic">No permissions assigned.</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

@@ -28,7 +28,10 @@ export default function Messages() {
         socket.on('new_message', (message: any) => {
             // Update messages list if viewing this conversation
             if (activeConversation && message.conversationId === activeConversation.id) {
-                setMessages(prev => [...prev, message]);
+                setMessages(prev => {
+                    if (prev.some(m => m.id === message.id)) return prev;
+                    return [...prev, message];
+                });
                 scrollToBottom();
             }
             // Refresh conversation list to update "last message"
@@ -57,7 +60,28 @@ export default function Messages() {
     const loadUsers = async () => {
         try {
             const res = await usersAPI.getAll();
-            setUsers(res.data.users.filter((u: any) => u.id !== user?.id));
+            let availableUsers = res.data.users.filter((u: any) => u.id !== user?.id);
+
+            // Enforce Role-Based Messaging Constraints
+            // Assuming default role IDs: 1 (Admin), 2 (Manager), 3 (Employee)
+
+            const isEmployee = user?.roleIds?.includes(3);
+            const isManager = user?.roleIds?.includes(2);
+
+            if (isEmployee) {
+                // Employees only see managers and admin
+                availableUsers = availableUsers.filter((u: any) =>
+                    u.roles?.some((r: any) => r.name === 'manager' || r.name === 'admin')
+                );
+            } else if (isManager) {
+                // Managers see employees and admin
+                availableUsers = availableUsers.filter((u: any) =>
+                    u.roles?.some((r: any) => r.name === 'employee' || r.name === 'admin')
+                );
+            }
+            // Admin (roleIds.includes(1)) sees everyone (no filter logic needed)
+
+            setUsers(availableUsers);
         } catch (error) {
             console.error('Failed to load users', error);
         }
@@ -81,18 +105,6 @@ export default function Messages() {
         e.preventDefault();
         if (!newMessage.trim() || !activeConversation || !socket) return;
 
-        // Optimistic update
-        const tempId = Date.now();
-        const msg = {
-            id: tempId,
-            conversation_id: activeConversation.id,
-            sender_id: user?.id,
-            content_encrypted: newMessage, // In real app, encrypt here
-            created_at: new Date().toISOString(),
-            is_private: 0,
-            sender_name: user?.username // Helper for display
-        };
-
         // Emit via socket
         socket.emit('send_message', {
             conversationId: activeConversation.id,
@@ -100,7 +112,6 @@ export default function Messages() {
             isPrivate: false
         });
 
-        setMessages(prev => [...prev, msg]);
         setNewMessage('');
 
         // Refresh list to update preview
@@ -116,10 +127,13 @@ export default function Messages() {
             const convRes = await messagesAPI.getConversations();
             setConversations(convRes.data.conversations);
 
-            // Find and select the newly created conversation
-            const newConv = convRes.data.conversations.find((c: any) => c.id === res.data.conversationId);
+            // The backend returns the full conversation dictionary
+            const newConv = convRes.data.conversations.find((c: any) => c.id === (res.data.conversation?.id || res.data.conversationId || res.data.id));
             if (newConv) {
                 loadMessages(newConv);
+            } else {
+                // Fallback to reload explicitly
+                loadConversations();
             }
         } catch (error) {
             console.error('Failed to create conversation', error);
@@ -155,11 +169,13 @@ export default function Messages() {
                             >
                                 <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                                        {/* Needs logic to show OTHER participant's initial */}
-                                        ?
+                                        {/* Show OTHER participant's initial */}
+                                        {conv.participants?.find((p: any) => p.id !== user?.id)?.full_name?.charAt(0) || '?'}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-gray-900 truncate">Conversation #{conv.id}</p>
+                                        <p className="font-semibold text-gray-900 truncate">
+                                            {conv.participants?.find((p: any) => p.id !== user?.id)?.full_name || `Conversation #${conv.id}`}
+                                        </p>
                                         <p className="text-sm text-gray-500 truncate">
                                             {conv.last_message || 'No messages yet'}
                                         </p>

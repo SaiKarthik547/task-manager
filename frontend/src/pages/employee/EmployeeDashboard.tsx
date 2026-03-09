@@ -8,6 +8,7 @@ export default function EmployeeDashboard() {
     const [tasks, setTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTask, setSelectedTask] = useState<any>(null);
+    const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
 
     useEffect(() => {
         loadTasks();
@@ -26,11 +27,45 @@ export default function EmployeeDashboard() {
     };
 
     const updateTaskStatus = async (taskId: number, status: string) => {
+        // Optimistic UI update
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
         try {
             await tasksAPI.update(taskId, { status });
-            await loadTasks();
+            // Optionally reload to ensure sync
+            // await loadTasks();
         } catch (error) {
             console.error('Failed to update task', error);
+            await loadTasks(); // Revert on failure
+        }
+    };
+
+    const handleDragStart = (e: React.DragEvent, taskId: number) => {
+        setDraggedTaskId(taskId);
+        e.dataTransfer.effectAllowed = 'move';
+        // Add a slight delay to allow the drag ghost to generate before styling
+        setTimeout(() => {
+            if (e.target instanceof HTMLElement) {
+                e.target.classList.add('opacity-50');
+            }
+        }, 0);
+    };
+
+    const handleDragEnd = (e: React.DragEvent) => {
+        setDraggedTaskId(null);
+        if (e.target instanceof HTMLElement) {
+            e.target.classList.remove('opacity-50');
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, status: string) => {
+        e.preventDefault();
+        if (draggedTaskId) {
+            updateTaskStatus(draggedTaskId, status);
         }
     };
 
@@ -117,8 +152,13 @@ export default function EmployeeDashboard() {
 
                 {/* Kanban Board */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {Object.entries(tasksByStatus).map(([status, statusTasks], columnIndex) => (
-                        <div key={status} className={`kanban-column animate-slide-up animate-delay-${columnIndex * 100}`}>
+                    {Object.entries(tasksByStatus).map(([status, statusTasks]) => (
+                        <div
+                            key={status}
+                            className={`kanban-column animate-slide-up bg-gray-50/50 p-4 rounded-xl min-h-[500px] border-2 border-transparent transition-colors duration-200 ${draggedTaskId ? 'border-dashed border-gray-300' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, status)}
+                        >
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-lg text-gray-800 capitalize flex items-center">
                                     <div className={`w-3 h-3 rounded-full mr-2 ${status === 'not_started' ? 'bg-gray-400' :
@@ -134,9 +174,12 @@ export default function EmployeeDashboard() {
                                 {statusTasks.map((task: any, index: number) => (
                                     <div
                                         key={task.id}
-                                        className="task-card animate-scale-in cursor-pointer"
+                                        className="task-card animate-scale-in cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow duration-200 bg-white"
                                         style={{ animationDelay: `${index * 50}ms` }}
                                         onClick={() => setSelectedTask(task)}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, task.id)}
+                                        onDragEnd={handleDragEnd}
                                     >
                                         {/* Priority indicator */}
                                         <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${task.priority === 'high' ? 'bg-gradient-danger' :

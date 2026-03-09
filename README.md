@@ -27,8 +27,9 @@ A production-ready, 100% free, self-hosted **Enterprise Task Management Platform
 
 ### 🚀 Production-Grade Implementation Updates
 ✅ **System-Wide Dark Mode** - Premium dynamic theming implemented with Tailwind CSS and saved user preferences.
+✅ **Interactive Kanban Boards** - True HTML5 Drag-and-Drop functionality built directly into Manager and Employee dashboards for seamless task progression.
 ✅ **Robust Authentication** - Fixed Python 3.12+ legacy `passlib` issues by migrating to direct `bcrypt` hashing for 100% login success.
-✅ **Real-Time Direct Messaging** - Re-architected Socket.io implementation to deliver messages instantly to private `user_{id}` rooms.
+✅ **Real-Time Direct Messaging** - Re-architected Socket.io implementation to deliver messages instantly to private `user_{id}` rooms, complete with fixed selection workflows.
 ✅ **Enterprise Scalability** - SQLite upgraded to Write-Ahead Logging (WAL) mode to handle high-frequency concurrent socket reads/writes without database locking.
 ✅ **Data Consistency** - All FastApi endpoints fully patched with `jsonable_encoder` to eliminate 500 Pydantic formatting errors.
 ✅ **Offline Notifications** - Real-time chat activity seamlessly triggers persistent database notifications when users are interacting.
@@ -639,14 +640,22 @@ task manager/
 
 ---
 
-## 🔑 Default Credentials
+## 🔑 Test Credentials
 
-| Field | Value |
-|-------|-------|
-| Username | `admin` |
-| Password | `Admin@123` |
+The database has been seeded with multiple test users to evaluate the Role-Based Access Control and Messaging constraints:
 
-⚠️ **IMPORTANT**: Change these credentials immediately after first login in a production environment!
+| Username | Password | Role | Access Level |
+|----------|----------|------|--------------|
+| admin    | Admin@123| Admin | Full System Access |
+| admin2   | Password@123| Admin | Full System Access |
+| manager1 | Manager@123| Manager | Project & Team Mgmt |
+| manager2 | Password@123| Manager | Project & Team Mgmt |
+| manager3 | Password@123| Manager | Project & Team Mgmt |
+| employee1| Employee@123| Employee | Task Execution |
+| emp2     | Password@123| Employee | Task Execution |
+| emp3     | Password@123| Employee | Task Execution |
+| emp4     | Password@123| Employee | Task Execution |
+| emp5     | Password@123| Employee | Task Execution |
 
 ---
 
