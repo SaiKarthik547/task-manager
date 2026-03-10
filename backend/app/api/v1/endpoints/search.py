@@ -21,11 +21,11 @@ def search_all(
     
     Returns structured { tasks: [], projects: [] } based on RBAC.
     """
-    is_admin = any(row.name == "Admin" for row in current_user.roles)
+    is_admin_or_manager = any(row.name in ["Admin", "Manager"] for row in current_user.roles)
     
     # 1. Search Tasks
     task_results = []
-    if is_admin:
+    if is_admin_or_manager:
         tasks = db.execute(
             text("SELECT id, title, description, status FROM tasks WHERE title LIKE :q OR description LIKE :q LIMIT 20"),
             {"q": f"%{q}%"}
@@ -51,7 +51,7 @@ def search_all(
         
     # 2. Search Projects
     project_results = []
-    if is_admin:
+    if is_admin_or_manager:
         projects = db.execute(
             text("SELECT id, name, description, health FROM projects WHERE name LIKE :q OR description LIKE :q LIMIT 20"),
             {"q": f"%{q}%"}

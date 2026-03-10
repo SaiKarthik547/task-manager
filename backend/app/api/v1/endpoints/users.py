@@ -28,33 +28,35 @@ def read_users(
     if has_view_all or is_admin_or_manager:
         users = db.query(User).offset(skip).limit(limit).all()
     else:
-        # Strict RBAC for Employees: Only see Admins, Project Owners, Project Members, and Co-assignees
-        from app.models.project import Project, Task, project_members
+        # Strict RBAC for Employees: See Admins, Managers, Teammates, and Project Co-Members
+        from app.models.project import project_members
         from app.models.auth import Role, user_roles
         
-        # 1. Find all projects the user is involved in
-        member_proj_ids = db.query(project_members.c.project_id).filter(project_members.c.user_id == current_user.id)
-        task_proj_ids = db.query(Task.project_id).filter(Task.assigned_to == current_user.id)
-        project_ids = member_proj_ids.union(task_proj_ids).subquery()
+        # 1. Admins and Managers
+        admin_and_mgr_roles = db.query(Role.id).filter(Role.name.in_(["Admin", "Manager"])).all()
+        role_ids = [r[0] for r in admin_and_mgr_roles]
         
-        # 2. Find all people related to these projects
-        owners = db.query(Project.owner_id).filter(Project.id.in_(project_ids))
-        members = db.query(project_members.c.user_id).filter(project_members.c.project_id.in_(project_ids))
-        assignees = db.query(Task.assigned_to).filter(Task.project_id.in_(project_ids))
+        admin_mgr_user_ids = []
+        if role_ids:
+            admin_mgr_users = db.query(user_roles.c.user_id).filter(user_roles.c.role_id.in_(role_ids)).all()
+            admin_mgr_user_ids = [u[0] for u in admin_mgr_users]
+            
+        # 2. Teammates (same manager)
+        teammate_ids = []
+        if current_user.manager_id:
+            teammates = db.query(User.id).filter(User.manager_id == current_user.manager_id).all()
+            teammate_ids = [t[0] for t in teammates]
+            
+        # 3. Project Co-Members
+        project_ids_subq = db.query(project_members.c.project_id).filter(project_members.c.user_id == current_user.id).subquery()
+        co_members = db.query(project_members.c.user_id).filter(project_members.c.project_id.in_(project_ids_subq)).all()
+        co_member_ids = [m[0] for m in co_members]
         
-        # 3. Find all Admins and ALL Managers
-        admin_manager_role_ids = db.query(Role.id).filter(Role.name.in_(["Admin", "Manager"])).all()
-        admin_manager_role_ids = [r[0] for r in admin_manager_role_ids]
-        admins_managers = db.query(user_roles.c.user_id).filter(user_roles.c.role_id.in_(admin_manager_role_ids))
+        # Combine all allowed IDs
+        allowed_ids = set([current_user.id, current_user.manager_id] + admin_mgr_user_ids + teammate_ids + co_member_ids)
+        allowed_ids.discard(None)
         
-        # 4. Find Teammates (same manager)
-        teammates = db.query(User.id).filter(User.manager_id == current_user.manager_id) if current_user.manager_id else db.query(User.id).filter(User.id == current_user.id)
-        
-        visible_user_ids = owners.union(members).union(assignees).union(admins_managers).union(teammates).subquery()
-        
-        users = db.query(User).filter(
-            (User.id.in_(visible_user_ids)) | (User.id == current_user.id) | (User.id == current_user.manager_id)
-        ).offset(skip).limit(limit).all()
+        users = db.query(User).filter(User.id.in_(list(allowed_ids))).offset(skip).limit(limit).all()
         
     return jsonable_encoder({"users": users})
 

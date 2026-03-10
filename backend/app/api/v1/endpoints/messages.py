@@ -77,10 +77,40 @@ def create_conversation(
     recipient = db.query(User).filter(User.id == recipient_id).first()
     if not recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
+    # RBAC: Check if current_user is allowed to message recipient
+    is_admin_or_manager = any(r.name in ["Admin", "Manager"] for r in current_user.roles)
+    
+    if not is_admin_or_manager:
+        from app.models.project import project_members
+        from app.models.auth import Role, user_roles
+        
+        # 1. Admins and Managers are always messageable
+        admin_and_mgr_roles = db.query(Role.id).filter(Role.name.in_(["Admin", "Manager"])).all()
+        role_ids = [r[0] for r in admin_and_mgr_roles]
+        
+        admin_mgr_user_ids = []
+        if role_ids:
+            admin_mgr_users = db.query(user_roles.c.user_id).filter(user_roles.c.role_id.in_(role_ids)).all()
+            admin_mgr_user_ids = [u[0] for u in admin_mgr_users]
+            
+        # 2. Teammates (same manager)
+        teammate_ids = []
+        if current_user.manager_id:
+            teammates = db.query(User.id).filter(User.manager_id == current_user.manager_id).all()
+            teammate_ids = [t[0] for t in teammates]
+            
+        # 3. Project Co-Members
+        project_ids_subq = db.query(project_members.c.project_id).filter(project_members.c.user_id == current_user.id).subquery()
+        co_members = db.query(project_members.c.user_id).filter(project_members.c.project_id.in_(project_ids_subq)).all()
+        co_member_ids = [m[0] for m in co_members]
+        
+        allowed_ids = set([current_user.id, current_user.manager_id] + admin_mgr_user_ids + teammate_ids + co_member_ids)
+        allowed_ids.discard(None)
+        
+        if recipient_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="You are not authorized to start a conversation with this user")
 
     # Check if direct conversation already exists
-    # Complex query, let's just create new for now or naive check
-    # Check if there is a 'direct' conversation with these 2 participants
     
     # Create new
     conversation = Conversation(

@@ -33,8 +33,10 @@ async def connect(sid, environ, auth):
 
         # Verify user exists in DB
         db = SessionLocal()
-        user = db.query(User).filter(User.id == user_id).first()
-        db.close()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+        finally:
+            db.close()
 
         if not user:
             print(f"Socket connection rejected: User {user_id} not found")

@@ -86,6 +86,7 @@ export default function EmployeeDashboard() {
         not_started: tasks.filter(t => t.status === 'not_started'),
         in_progress: tasks.filter(t => t.status === 'in_progress'),
         under_review: tasks.filter(t => t.status === 'under_review'),
+        blocked: tasks.filter(t => t.status === 'blocked'),
         completed: tasks.filter(t => t.status === 'completed'),
     };
 
@@ -151,7 +152,7 @@ export default function EmployeeDashboard() {
                 </div>
 
                 {/* Kanban Board */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                     {Object.entries(tasksByStatus).map(([status, statusTasks]) => (
                         <div
                             key={status}

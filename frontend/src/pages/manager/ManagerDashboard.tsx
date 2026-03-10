@@ -61,6 +61,7 @@ export default function ManagerDashboard() {
         not_started: tasks.filter(t => t.status === 'not_started'),
         in_progress: tasks.filter(t => t.status === 'in_progress'),
         under_review: tasks.filter(t => t.status === 'under_review'),
+        blocked: tasks.filter(t => t.status === 'blocked'),
         completed: tasks.filter(t => t.status === 'completed'),
     };
 
@@ -244,7 +245,7 @@ export default function ManagerDashboard() {
                 {/* Team Tasks Kanban Board */}
                 <div className="glass-card p-6 animate-slide-up animate-delay-100">
                     <h2 className="text-2xl font-bold text-gray-800 mb-6">Team Tasks Board</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                         {Object.entries(tasksByStatusGroups).map(([status, statusTasks]) => (
                             <div
                                 key={status}

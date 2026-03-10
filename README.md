@@ -31,6 +31,9 @@ A production-ready, 100% free, self-hosted **Enterprise Task Management Platform
 ✅ **Organizational Hierarchy** - Enhanced RBAC with Manager-Employee relationships. Employees now automatically see their allocated managers and teammates.
 ✅ **Task Workflow Engine** - Server-side validation for status transitions and dependency blocking (prevents starting tasks if predecessors are incomplete).
 ✅ **System Synchronization** - 100% field alignment between Backend and Frontend (aligned `fullName` and `is_active` logic).
+✅ **Strict Messaging Disciplines** - Hardened backend RBAC ensuring users only message authorized peers (Managers <-> Employees, Teammates).
+✅ **Leak-Free Real-Time Connections** - Hardened Socket.IO with guaranteed database connection closures under all error states.
+✅ **Robust Kanban UI** - 5-column Kanban boards with fully supported "Blocked" drop zones for accurate workflow lifecycle tracking.
 
 ### Core Functionality
 ✅ **100% Free & Open-Source** - No paid dependencies or licensing fees  
